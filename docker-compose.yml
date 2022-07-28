@@ -1,0 +1,37 @@
+version: "3"
+
+services:
+  mysqldb:
+    image: mysql:latest
+    restart: always
+    container_name: mysqldb
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+    
+  amqp:
+    image: rabbitmq
+    restart: always
+    container_name: rabbit-test
+    hostname: rabbit-test
+    ports:
+      - 5672:5672
+  
+  user-service:
+    depends_on:
+      - mysqldb
+      - amqp
+    build: ./user-service
+    image: user-service
+    container_name: user-service
+    restart: always
+  
+  frontend-service:
+    depends_on:
+      - user-service
+    build: ./frontend-service
+    image: frontend-service
+    container_name: frontend-service
+    ports:
+      - 3002:3002
+    
+    
