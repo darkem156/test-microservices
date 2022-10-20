@@ -1,0 +1,200 @@
+# App Deployments
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      role: frontend-service
+  template:
+    metadata:
+      labels:
+        role: frontend-service
+    spec:
+      containers:
+        - name: frontend-service
+          image: frontend-service
+          imagePullPolicy: Never
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: "1"
+            requests:
+              memory: 256Mi
+              cpu: "0.2"
+          ports:
+            - containerPort: 3002
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      role: user-service
+  template:
+    metadata:
+      labels:
+        role: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: user-service
+          imagePullPolicy: Never
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: "1"
+            requests:
+              memory: 256Mi
+              cpu: "0.2"
+          ports:
+            - containerPort: 3003
+---
+# Load Balancers
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 3002
+    targetPort: 3002
+  selector:
+    role: frontend-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 3003
+    targetPort: 3003
+  selector:
+    role: user-service
+---
+# App Dependencies
+# Here is the deploy of MySQL and RabbitMQ for Kubernetes
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbit-test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      role: rabbit-test
+  template:
+    metadata:
+      labels:
+        role: rabbit-test
+    spec:
+      containers:
+        - name: rabbit-test
+          image: rabbitmq
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: "1"
+            requests:
+              memory: 256Mi
+              cpu: "0.2"
+          ports:
+            - containerPort: 5672
+---
+# MySQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysqldb
+spec:
+  selector:
+    matchLabels:
+      app: mysqldb
+  template:
+    metadata:
+      labels:
+        app: mysqldb
+    spec:
+      containers:
+        - name: mysqldb
+          image: mysql:5.7
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "password"
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+---
+# MySQL Persistent Volume
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+# MySQL Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+spec: 
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+# RabbitMQ Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbit-test
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 5672
+    targetPort: 5672
+  selector:
+    role: rabbit-test
+---
+# MySQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysqldb
+  labels:
+    app: mysqldb
+spec:
+  ports:
+    - port: 3306
+      targetPort: 3306
+  selector:
+    app: mysqldb
+  type: LoadBalancer
+

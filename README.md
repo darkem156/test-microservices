@@ -17,7 +17,7 @@
     ~~~
     $ docker-compose up
     ~~~
-    This will create the following container:
+    This will create the following containers:
     - user-service
     - frontend-service (On port 3002)
     - rabbit-test (On port 5672)
@@ -51,3 +51,36 @@ You can see the users on the database with the following steps:
     ~~~
     mysql> SELECT * FROM users;
     ~~~
+
+## How to run with Kubernetes
+First of all, you need to have the following Kubernetes tools:
+- Minikube
+- Kubectl
+
+1. Run the following commands to start Minikube and the Load Balancers Service:
+~~~
+$ minikube start
+$ minikube tunnel
+~~~
+2. Type the following commands to build the images on the Minikube Environment (this is because sometimes you need to "specify" the docker-env for minikube):
+~~~
+$ eval $(minikube docker-env)
+$ docker-compose build
+~~~
+3. Deploy all the Pods and Services from the manifest:
+~~~
+$ kubectl apply -f kubernetes.yaml
+~~~
+4. Save the mysqldb Service and the frontend-service IP adress by seeing the log of the following command:
+~~~
+$ kubectl get svc -o wide
+~~~
+5. Set the Database using the mysqldb IP:
+~~~
+$ cat database/db.sql | mysql -h (mysqldb_ip) -u root --password=password
+~~~
+6. Connect to (frontend-service_ip):3002 and start using the service
+7. You can connect to the Database anytime using:
+~~~
+$ mysql -h (mysqldb_ip) -u root --password=password
+~~~
